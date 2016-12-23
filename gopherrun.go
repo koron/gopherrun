@@ -48,6 +48,7 @@ func runGame() error {
 	defer r.Destroy()
 	r.SetLogicalSize(320, 180)
 
+	// background characters
 	t1, s1, err := loadTexture(r, "chartable.png")
 	if err != nil {
 		return err
@@ -55,12 +56,21 @@ func runGame() error {
 	defer t1.Destroy()
 	defer s1.Free()
 
+	// sprite characters
+	t2, s2, err := loadTexture(r, "spritetable.png")
+	if err != nil {
+		return err
+	}
+	defer t2.Destroy()
+	defer s2.Free()
+
 	// FIXME: setup  more resources
 
 	g := &Game{
 		win: w,
 		ren: r,
 		ch1: t1,
+		ch2: t2,
 	}
 	if err := g.Init(); err != nil {
 		return err
