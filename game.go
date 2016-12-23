@@ -244,8 +244,35 @@ func (g *Game) update() {
 	case gameover:
 		g.speedX = 0
 	}
-	// TODO: check to hit wall
+
 	g.bgOffX += g.speedX
+	// check to hit wall
+	if g.speedX > 0 {
+		y := g.gopherY.Floor()
+		cx := ((gopherX + g.bgOffX).Floor() + cellWidth) / cellWidth
+		cy := y / cellWidth
+		ch := 3
+		if y%cellHeight == 0 {
+			ch = 2
+		}
+		hit := false
+		for i := 0; i < ch; i++ {
+			cy2 := cy + i
+			if cy2 >= sch {
+				break
+			}
+			if g.bgMap[cx*sch+cy+i] >= 0x10 {
+				hit = true
+				break
+			}
+		}
+		if hit {
+			g.speedX = 0
+			g.bgOffX = fixed.I((cx-1)*cellWidth) - gopherX
+		}
+	}
+
+	// scroll and prepare new area
 	for g.bgOffX >= maxBgOffx {
 		g.bgOffX -= maxBgOffx
 		g.shiftBG()
@@ -264,8 +291,8 @@ func (g *Game) update() {
 			// TODO: generate stage data
 			n := (scw - 1) * sch
 			for y := 0; y < sch; y++ {
-				if y < 10 {
-					g.bgMap[n+y] = 0x00
+				if y == 9 {
+					g.bgMap[n+y] = 0x12
 				} else {
 					g.bgMap[n+y] = 0x00
 				}
@@ -277,8 +304,8 @@ func (g *Game) update() {
 	// check to touch grand
 	if g.speedY >= 0 {
 		x := (gopherX + g.bgOffX).Floor()
-		cy := (g.gopherY.Floor() + cellHeight*2) / cellHeight
 		cx := x / cellWidth
+		cy := (g.gopherY.Floor() + cellHeight*2) / cellHeight
 		cw := 2
 		if x%cellWidth == 0 {
 			cw = 1
@@ -304,6 +331,7 @@ func (g *Game) update() {
 	if g.gopherY.Floor() > screenHeight {
 		// game over
 		g.mode = gameover
+		// FIXME: show game over message
 	}
 
 	if g.mode == gameover && g.pressedA {
