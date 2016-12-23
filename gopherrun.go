@@ -1,40 +1,75 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/veandco/go-sdl2/sdl"
+	img "github.com/veandco/go-sdl2/sdl_image"
 )
 
-func main() {
-	sdl.Init(sdl.INIT_EVERYTHING)
+var renderFlags uint32 = sdl.RENDERER_ACCELERATED | sdl.RENDERER_PRESENTVSYNC
 
-	window, err := sdl.CreateWindow("Gopher Run!", sdl.WINDOWPOS_UNDEFINED,
+var (
+	screenWidth  = 320
+	screenHeight = 180
+	cellWidth    = 16
+	cellHeight   = 16
+)
+
+func loadTexture(r *sdl.Renderer, name string) (*sdl.Texture, *sdl.Surface, error) {
+	s, err := img.Load(name)
+	if err != nil {
+		return nil, nil, err
+	}
+	t, err := r.CreateTextureFromSurface(s)
+	if err != nil {
+		s.Free()
+		return nil, nil, err
+	}
+	return t, s, nil
+}
+
+// runGame setup resources and run a game.
+func runGame() error {
+	sdl.Init(sdl.INIT_EVERYTHING)
+	defer sdl.Quit()
+
+	w, err := sdl.CreateWindow("Gopher Run!", sdl.WINDOWPOS_UNDEFINED,
 		sdl.WINDOWPOS_UNDEFINED, 1280, 720, sdl.WINDOW_SHOWN)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer window.Destroy()
+	defer w.Destroy()
 
-	w, h := window.GetSize()
-	fmt.Printf("Size: %d, %d\n", w, h)
-
-	r, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	r, err := sdl.CreateRenderer(w, -1, renderFlags)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer r.Destroy()
 	r.SetLogicalSize(320, 180)
-	r.SetDrawColor(255, 0, 0, 255)
-	r.FillRect(&sdl.Rect{0, 0, 200, 200})
-	r.Present()
 
-	sdl.Delay(1000)
+	t1, s1, err := loadTexture(r, "chartable.png")
+	if err != nil {
+		return err
+	}
+	defer t1.Destroy()
+	defer s1.Free()
 
-	r.SetDrawColor(0, 0, 255, 255)
-	r.FillRect(&sdl.Rect{200, 100, 200, 200})
-	r.Present()
+	// FIXME: setup  more resources
 
-	sdl.Delay(2000)
-	sdl.Quit()
+	g := &Game{
+		win: w,
+		ren: r,
+		ch1: t1,
+	}
+	if err := g.Init(); err != nil {
+		return err
+	}
+	return g.Run()
+}
+
+func main() {
+	if err := runGame(); err != nil {
+		log.Fatal(err)
+	}
 }
