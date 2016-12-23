@@ -5,6 +5,7 @@ import (
 
 	"github.com/veandco/go-sdl2/sdl"
 	img "github.com/veandco/go-sdl2/sdl_image"
+	mix "github.com/veandco/go-sdl2/sdl_mixer"
 )
 
 var renderFlags uint32 = sdl.RENDERER_ACCELERATED | sdl.RENDERER_PRESENTVSYNC
@@ -64,6 +65,18 @@ func runGame() error {
 	defer t2.Destroy()
 	defer s2.Free()
 
+	err = mix.OpenAudio(mix.DEFAULT_FREQUENCY, mix.DEFAULT_FORMAT,
+		mix.DEFAULT_CHANNELS, mix.DEFAULT_CHUNKSIZE)
+	if err != nil {
+		return err
+	}
+
+	m1, err := mix.LoadMUS("jump07.mp3")
+	if err != nil {
+		return err
+	}
+	defer m1.Free()
+
 	// FIXME: setup  more resources
 
 	g := &Game{
@@ -71,6 +84,7 @@ func runGame() error {
 		ren: r,
 		ch1: t1,
 		ch2: t2,
+		se1: m1,
 	}
 	if err := g.Init(); err != nil {
 		return err

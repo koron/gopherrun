@@ -1,7 +1,10 @@
 package main
 
 import (
+	"math/rand"
+
 	"github.com/veandco/go-sdl2/sdl"
+	mix "github.com/veandco/go-sdl2/sdl_mixer"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -34,6 +37,8 @@ var (
 	accelX = fixed.I(1) / 40
 
 	gopherInitY = fixed.I(8 * 16)
+
+	walkPattern = []int{3, 4, 5}
 )
 
 type Game struct {
@@ -41,6 +46,7 @@ type Game struct {
 	ren *sdl.Renderer
 	ch1 *sdl.Texture
 	ch2 *sdl.Texture
+	se1 *mix.Music
 
 	running   bool
 	frameNum  uint64
@@ -61,6 +67,14 @@ type Game struct {
 	speedY   fixed.Int26_6
 	floating bool
 	risingN  int
+
+	animeIndex int
+	animeFrame int
+
+	rand         *rand.Rand
+	groundHeight int
+	groundHole   bool
+	groundCont   int
 }
 
 type Sprite struct {
@@ -89,6 +103,12 @@ func (g *Game) Init() error {
 	g.bgMap = make([]uint8, scw*sch)
 	g.spPatterns = []SpritePattern{
 		SpritePattern{x: 0, y: 0, w: 16, h: 32},
+		SpritePattern{x: 16, y: 0, w: 16, h: 32},
+		SpritePattern{x: 32, y: 0, w: 16, h: 32},
+		SpritePattern{x: 48, y: 0, w: 16, h: 32},
+		SpritePattern{x: 64, y: 0, w: 16, h: 32},
+		SpritePattern{x: 80, y: 0, w: 16, h: 32},
+		SpritePattern{x: 96, y: 0, w: 16, h: 32},
 	}
 	g.sprites = []Sprite{
 		Sprite{id: 0, x: int32(gopherX.Floor()), y: 0},
@@ -114,6 +134,12 @@ func (g *Game) gotoTitle() {
 	g.speedY = 0
 	g.floating = false
 	g.risingN = 0
+	g.animeIndex = 0
+	g.animeFrame = 0
+	g.rand = rand.New(rand.NewSource(114514))
+	g.groundHeight = 10
+	g.groundHole = false
+	g.groundCont = 5
 }
 
 func (g *Game) Run() error {
@@ -230,6 +256,7 @@ func (g *Game) update() {
 			g.risingN = risingInitN
 			g.speedY = -risingPower
 			g.mode = playing
+			g.se1.Play(1)
 		}
 	}
 
@@ -258,7 +285,9 @@ func (g *Game) update() {
 		hit := false
 		for i := 0; i < ch; i++ {
 			cy2 := cy + i
-			if cy2 >= sch {
+			if cy2 < 0 {
+				continue
+			} else if cy2 >= sch {
 				break
 			}
 			if g.bgMap[cx*sch+cy+i] >= 0x10 {
@@ -284,17 +313,62 @@ func (g *Game) update() {
 				if y < 10 {
 					g.bgMap[n+y] = 0x00
 				} else {
-					g.bgMap[n+y] = 0x11
+					g.bgMap[n+y] = 0x10
 				}
 			}
 		case playing:
 			// TODO: generate stage data
 			n := (scw - 1) * sch
 			for y := 0; y < sch; y++ {
-				if y == 9 {
-					g.bgMap[n+y] = 0x12
+				if !g.groundHole && y >= g.groundHeight {
+					g.bgMap[n+y] = 0x10
 				} else {
 					g.bgMap[n+y] = 0x00
+				}
+			}
+			g.groundCont--
+			if g.groundCont <= 0 {
+				if !g.groundHole && g.rand.Float32() < 0.17 {
+					c := int(g.rand.ExpFloat64() * 1.5)
+					if c < 1 {
+						c = 1
+					} else if c > 4 {
+						c = 4
+					}
+					g.groundHole = true
+					g.groundCont = c
+				} else {
+					if r := g.rand.Float32(); r < 0.18 {
+						c := int(g.rand.ExpFloat64() * 1)
+						if c < 1 {
+							c = 1
+						} else if c > 4 {
+							c = 4
+						}
+						g.groundHeight -= c
+						if g.groundHeight < 4 {
+							g.groundHeight = 4
+						}
+					} else if r >= 0.82 {
+						c := int(g.rand.ExpFloat64() * 1)
+						if c < 1 {
+							c = 1
+						} else if c > 4 {
+							c = 4
+						}
+						g.groundHeight += c
+						if g.groundHeight > 10 {
+							g.groundHeight = 10
+						}
+					}
+					c := int(g.rand.NormFloat64()*2 + 3)
+					if c < 1 {
+						c = 1
+					} else if c > 8 {
+						c = 8
+					}
+					g.groundHole = false
+					g.groundCont = c
 				}
 			}
 		}
@@ -310,7 +384,7 @@ func (g *Game) update() {
 		if x%cellWidth == 0 {
 			cw = 1
 		}
-		if cy < sch {
+		if cy >= 0 && cy < sch {
 			touch := false
 			for i := 0; i < cw; i++ {
 				if g.bgMap[(cx+i)*sch+cy] >= 0x10 {
@@ -339,5 +413,20 @@ func (g *Game) update() {
 		g.gotoTitle()
 	}
 
+	if g.floating {
+		g.animeIndex = 6
+		g.animeFrame = 0
+	} else if g.speedX > 0 {
+		g.animeIndex = walkPattern[g.animeFrame/10]
+		g.animeFrame++
+		if g.animeFrame >= len(walkPattern)*10 {
+			g.animeFrame = 0
+		}
+	} else {
+		g.animeFrame = 0
+		g.animeIndex = 0
+	}
+
 	g.sprites[0].y = int32(g.gopherY.Floor())
+	g.sprites[0].id = g.animeIndex
 }
