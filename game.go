@@ -187,6 +187,10 @@ func (g *Game) initNewFrame() {
 
 func (g *Game) procEvent(raw sdl.Event) {
 	switch ev := raw.(type) {
+	case *sdl.WindowEvent:
+		if ev.Event == sdl.WINDOWEVENT_CLOSE {
+			g.running = false
+		}
 	case *sdl.KeyDownEvent:
 		if ev.Repeat != 0 {
 			break
