@@ -10,13 +10,3 @@ Sample game using [Ebitengine](https://ebitengine.org/).
 Blog post about this project in Japanese: [GolangとSDL2でゲームを作る / Making a game with Golang and SDL2](https://www.kaoriya.net/blog/2016/12/24/).
 
 For the jumping sound effect, I used `jump07` from the [無料効果音で遊ぼう! / "Play with free sound effects!](https://taira-komori.jpn.org/game01.html) site.
-
-## Build on Windows
-
-```console
-# Preparation
-$ pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_mixer
-
-# Build
-$ go build
-```
