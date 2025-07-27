@@ -10,6 +10,8 @@ import (
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/math/fixed"
@@ -61,6 +63,8 @@ type Game2 struct {
 
 	bgTile     *ebiten.Image
 	spriteTile *ebiten.Image
+
+	seJump *audio.Player
 }
 
 func (g *Game2) Init() error {
@@ -90,6 +94,23 @@ func (g *Game2) Init() error {
 	if err != nil {
 		return err
 	}
+
+	// Load sounds
+	audioContext := audio.NewContext(sampleRate)
+	f, err := resourcesFS.Open("jump07.ogg")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	s, err := vorbis.DecodeWithSampleRate(sampleRate, f)
+	if err != nil {
+		return err
+	}
+	p, err := audioContext.NewPlayer(s)
+	if err != nil {
+		return err
+	}
+	g.seJump = p
 
 	g.gotoTitle()
 	return nil
@@ -178,8 +199,8 @@ func (g *Game2) updateByInput() {
 			g.risingN = risingInitN
 			g.speedY = -risingPower
 			g.mode = playing
-			// TODO: play sound effect
-			//g.se1.Play(1)
+			g.seJump.SetPosition(0)
+			g.seJump.Play()
 		}
 	}
 

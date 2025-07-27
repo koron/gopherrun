@@ -12,6 +12,8 @@ const (
 	cellWidth    = 16
 	cellHeight   = 16
 
+	sampleRate = 44100
+
 	// scw is screen character width
 	scw = (screenWidth+cellWidth-1)/cellWidth + 1
 
