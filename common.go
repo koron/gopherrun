@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	windowWidth  = screenWidth * 4
+	windowHeight = screenHeight * 4
+
 	screenWidth  = 320
 	screenHeight = 180
 	cellWidth    = 16
@@ -50,19 +53,19 @@ var (
 
 type Sprite struct {
 	id int
-	x  int32
-	y  int32
+	x  int
+	y  int
 }
 
 type SpritePattern struct {
-	x int32
-	y int32
-	w int32
-	h int32
+	x int
+	y int
+	w int
+	h int
 }
 
 func (sp SpritePattern) Rect() image.Rectangle {
-	return image.Rect(int(sp.x), int(sp.y), int(sp.x+sp.w), int(sp.y+sp.h))
+	return image.Rect(sp.x, sp.y, sp.x+sp.w, sp.y+sp.h)
 }
 
 type Mode int

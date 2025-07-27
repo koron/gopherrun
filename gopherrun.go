@@ -12,7 +12,7 @@ func main() {
 	if err := game.Init(); err != nil {
 		log.Fatal(err)
 	}
-	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowTitle("Gopher Run!")
 	if err := ebiten.RunGame(&game); err != nil {
 		log.Fatal(err)

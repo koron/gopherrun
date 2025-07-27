@@ -82,7 +82,7 @@ func (g *Game) Init() error {
 		{x: 96, y: 0, w: 16, h: 32},
 	}
 	g.sprites = []Sprite{
-		{id: 0, x: int32(gopherX.Floor()), y: 0},
+		{id: 0, x: int(gopherX.Floor()), y: 0},
 	}
 
 	var err error
@@ -254,6 +254,32 @@ func (g *Game) shiftBG() {
 	copy(g.bgMap[0:l-sch], g.bgMap[sch:])
 }
 
+func between(n, minN, maxN int) int {
+	return min(max(n, minN), maxN)
+}
+
+func (g *Game) generateNextBlocks() {
+	if !g.groundHole && g.rand.Float32() < 0.17 {
+		c := between(int(g.rand.ExpFloat64()*1.5), 1, 4)
+		g.groundHole = true
+		g.groundCont = c
+		return
+	}
+
+	if r := g.rand.Float32(); r < 0.18 {
+		c := between(int(g.rand.ExpFloat64()*1), 1, 4)
+		g.groundHeight = max(g.groundHeight-c, 4)
+		if g.groundHeight < 4 {
+			g.groundHeight = 4
+		}
+	} else if r >= 0.82 {
+		c := between(int(g.rand.ExpFloat64()*1), 1, 4)
+		g.groundHeight = min(g.groundHeight+c, 10)
+	}
+	g.groundHole = false
+	g.groundCont = between(int(g.rand.NormFloat64()*2+3), 1, 8)
+}
+
 // updateScroll scroll and prepare new area
 func (g *Game) updateScroll() {
 	for g.bgOffX >= maxBgOffx {
@@ -271,59 +297,19 @@ func (g *Game) updateScroll() {
 				}
 			}
 		case playing:
-			// FIXME: generate better stage data
 			n := (scw - 1) * sch
-			for y := 0; y < sch; y++ {
+			for y := range sch {
 				if !g.groundHole && y >= g.groundHeight {
 					g.bgMap[n+y] = 0x10
 				} else {
 					g.bgMap[n+y] = 0x00
 				}
 			}
+
+			// FIXME: generate better stage data
 			g.groundCont--
 			if g.groundCont <= 0 {
-				if !g.groundHole && g.rand.Float32() < 0.17 {
-					c := int(g.rand.ExpFloat64() * 1.5)
-					if c < 1 {
-						c = 1
-					} else if c > 4 {
-						c = 4
-					}
-					g.groundHole = true
-					g.groundCont = c
-				} else {
-					if r := g.rand.Float32(); r < 0.18 {
-						c := int(g.rand.ExpFloat64() * 1)
-						if c < 1 {
-							c = 1
-						} else if c > 4 {
-							c = 4
-						}
-						g.groundHeight -= c
-						if g.groundHeight < 4 {
-							g.groundHeight = 4
-						}
-					} else if r >= 0.82 {
-						c := int(g.rand.ExpFloat64() * 1)
-						if c < 1 {
-							c = 1
-						} else if c > 4 {
-							c = 4
-						}
-						g.groundHeight += c
-						if g.groundHeight > 10 {
-							g.groundHeight = 10
-						}
-					}
-					c := int(g.rand.NormFloat64()*2 + 3)
-					if c < 1 {
-						c = 1
-					} else if c > 8 {
-						c = 8
-					}
-					g.groundHole = false
-					g.groundCont = c
-				}
+				g.generateNextBlocks()
 			}
 		}
 	}
@@ -395,7 +381,7 @@ func (g *Game) Update() error {
 		g.animeIndex = 0
 	}
 
-	g.sprites[0].y = int32(g.gopherY.Floor())
+	g.sprites[0].y = int(g.gopherY.Floor())
 	g.sprites[0].id = g.animeIndex
 
 	return nil
