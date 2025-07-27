@@ -28,6 +28,8 @@ jobs:
         exclude:
         - os: windows-latest
           arch: arm64
+        - os: ubuntu-latest
+          arch: arm64
 
     steps:
 
@@ -122,8 +124,8 @@ jobs:
       with: { name: darwin_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: linux_amd64 }
-    - uses: actions/download-artifact@v4
-      with: { name: linux_arm64 }
+    #- uses: actions/download-artifact@v4
+    #  with: { name: linux_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: windows_amd64 }
     - run: ls -lafR
