@@ -159,8 +159,8 @@ func (g *Game) Run() error {
 
 func (g *Game) drawBG() error {
 	i := 0
-	src := sdl.Rect{0, 0, int32(cellWidth), int32(cellHeight)}
-	dst := sdl.Rect{0, 0, int32(cellWidth), int32(cellHeight)}
+	src := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
+	dst := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
 	for x := 0; x < scw; x++ {
 		dst.X = int32(x*cellWidth - g.bgOffX.Floor())
 		for y := 0; y < sch; y++ {
@@ -223,8 +223,8 @@ func (g *Game) drawSprites() error {
 	for i := len(g.sprites) - 1; i >= 0; i-- {
 		s := g.sprites[i]
 		p := g.spPatterns[s.id]
-		src := sdl.Rect{p.x, p.y, p.w, p.h}
-		dst := sdl.Rect{s.x, s.y, p.w, p.h}
+		src := sdl.Rect{X: p.x, Y: p.y, W: p.w, H: p.h}
+		dst := sdl.Rect{X: s.x, Y: s.y, W: p.w, H: p.h}
 		if err := g.ren.Copy(g.ch2, &src, &dst); err != nil {
 			return err
 		}
