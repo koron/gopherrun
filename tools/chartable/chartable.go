@@ -56,7 +56,7 @@ func drawBG(img *image.RGBA, x, y, w, h int) {
 		img.Set(x, y+i, fg)
 		img.Set(x+w-1, y+i, fg)
 		for j := 1; j < w-1; j++ {
-			img.Set(x+j,y+i, bg)
+			img.Set(x+j, y+i, bg)
 		}
 	}
 }
