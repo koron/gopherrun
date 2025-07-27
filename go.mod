@@ -4,7 +4,6 @@ go 1.23.11
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
-	github.com/veandco/go-sdl2 v0.4.40
 	golang.org/x/image v0.29.0
 )
 
