@@ -6,13 +6,22 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-var (
+const (
+	screenWidth  = 320
+	screenHeight = 180
+	cellWidth    = 16
+	cellHeight   = 16
+
 	// scw is screen character width
 	scw = (screenWidth+cellWidth-1)/cellWidth + 1
 
 	// sch is screen character height
 	sch = (screenHeight+cellHeight-1)/cellHeight + 1
 
+	risingInitN = 10
+)
+
+var (
 	// maxBgOffx is max value for bgOffX
 	maxBgOffx = fixed.I(16)
 
@@ -23,8 +32,6 @@ var (
 
 	// risingPower
 	risingPower = fixed.I(11) / 2
-
-	risingInitN = 10
 
 	gopherX = fixed.I(320) / 5
 

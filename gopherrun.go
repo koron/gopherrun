@@ -21,13 +21,6 @@ var jumpSound []byte
 
 var renderFlags uint32 = sdl.RENDERER_ACCELERATED | sdl.RENDERER_PRESENTVSYNC
 
-var (
-	screenWidth  = 320
-	screenHeight = 180
-	cellWidth    = 16
-	cellHeight   = 16
-)
-
 // loadTexture load a texture from memory.
 func loadTexture(r *sdl.Renderer, p []byte) (*sdl.Texture, *sdl.Surface, error) {
 	rw, err := sdl.RWFromMem(p)
