@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
+	"github.com/veandco/go-sdl2/img"
+	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
-	img "github.com/veandco/go-sdl2/sdl_image"
-	mix "github.com/veandco/go-sdl2/sdl_mixer"
 )
 
 var renderFlags uint32 = sdl.RENDERER_ACCELERATED | sdl.RENDERER_PRESENTVSYNC

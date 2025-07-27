@@ -1,3 +1,7 @@
+*~
+default.pgo
+tags
+tmp/
+
 gopherrun
 gopherrun.exe
-tmp/
