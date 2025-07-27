@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	var game Game2
+	var game Game
 	if err := game.Init(); err != nil {
 		log.Fatal(err)
 	}

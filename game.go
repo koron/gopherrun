@@ -30,7 +30,7 @@ func init() {
 	resourcesFS = fsys
 }
 
-type Game2 struct {
+type Game struct {
 	mode Mode
 
 	frameNum  uint64
@@ -67,7 +67,7 @@ type Game2 struct {
 	seJump *audio.Player
 }
 
-func (g *Game2) Init() error {
+func (g *Game) Init() error {
 	// Init BG
 	g.bgMap = make([]uint8, scw*sch)
 
@@ -116,7 +116,7 @@ func (g *Game2) Init() error {
 	return nil
 }
 
-func (g *Game2) gotoTitle() {
+func (g *Game) gotoTitle() {
 	for x := 0; x < scw; x++ {
 		for y := 0; y < 10; y++ {
 			g.bgMap[x*sch+y] = 0x00
@@ -144,7 +144,7 @@ func (g *Game2) gotoTitle() {
 	g.rand = rand.New(rand.NewSource(114514))
 }
 
-func (g *Game2) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 320, 180
 }
 
@@ -166,7 +166,7 @@ func isKeysJustReleased(keys ...ebiten.Key) bool {
 	return false
 }
 
-func (g *Game2) updateInput() error {
+func (g *Game) updateInput() error {
 	g.running = !inpututil.IsKeyJustPressed(ebiten.KeyEscape)
 	g.frameNum++
 	g.pressedA = isKeysJustPressed(ebiten.KeyEnter, ebiten.KeySpace)
@@ -178,7 +178,7 @@ func (g *Game2) updateInput() error {
 	return nil
 }
 
-func (g *Game2) updateByInput() {
+func (g *Game) updateByInput() {
 	if g.floating {
 		if g.risingN > 0 {
 			if g.releasedA {
@@ -219,7 +219,7 @@ func (g *Game2) updateByInput() {
 	g.bgOffX += g.speedX
 }
 
-func (g *Game2) checkToHitWalls() {
+func (g *Game) checkToHitWalls() {
 	if g.speedX <= 0 {
 		return
 	}
@@ -249,13 +249,13 @@ func (g *Game2) checkToHitWalls() {
 	}
 }
 
-func (g *Game2) shiftBG() {
+func (g *Game) shiftBG() {
 	l := len(g.bgMap)
 	copy(g.bgMap[0:l-sch], g.bgMap[sch:])
 }
 
 // updateScroll scroll and prepare new area
-func (g *Game2) updateScroll() {
+func (g *Game) updateScroll() {
 	for g.bgOffX >= maxBgOffx {
 		g.bgOffX -= maxBgOffx
 		g.shiftBG()
@@ -329,7 +329,7 @@ func (g *Game2) updateScroll() {
 	}
 }
 
-func (g *Game2) checkToTouchGround() {
+func (g *Game) checkToTouchGround() {
 	// check to touch grand
 	if g.speedY >= 0 {
 		x := (gopherX + g.bgOffX).Floor()
@@ -365,7 +365,7 @@ func (g *Game2) checkToTouchGround() {
 	}
 }
 
-func (g *Game2) Update() error {
+func (g *Game) Update() error {
 	if err := g.updateInput(); err != nil {
 		return err
 	}
@@ -401,14 +401,14 @@ func (g *Game2) Update() error {
 	return nil
 }
 
-func (g *Game2) Draw(screen *ebiten.Image) {
+func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, "Hello, World!")
 	g.drawBG(screen)
 	g.drawSprites(screen)
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
 }
 
-func (g *Game2) drawBG(screen *ebiten.Image) {
+func (g *Game) drawBG(screen *ebiten.Image) {
 	i := 0
 	for x := 0; x < scw; x++ {
 		dx := x*cellWidth - g.bgOffX.Floor()
@@ -426,7 +426,7 @@ func (g *Game2) drawBG(screen *ebiten.Image) {
 	}
 }
 
-func (g *Game2) drawSprites(screen *ebiten.Image) {
+func (g *Game) drawSprites(screen *ebiten.Image) {
 	for i := len(g.sprites) - 1; i >= 0; i-- {
 		s := g.sprites[i]
 		p := g.spPatterns[s.id]
