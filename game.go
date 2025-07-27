@@ -3,8 +3,8 @@ package main
 import (
 	"math/rand"
 
+	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
-	mix "github.com/veandco/go-sdl2/sdl_mixer"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -102,16 +102,16 @@ const (
 func (g *Game) Init() error {
 	g.bgMap = make([]uint8, scw*sch)
 	g.spPatterns = []SpritePattern{
-		SpritePattern{x: 0, y: 0, w: 16, h: 32},
-		SpritePattern{x: 16, y: 0, w: 16, h: 32},
-		SpritePattern{x: 32, y: 0, w: 16, h: 32},
-		SpritePattern{x: 48, y: 0, w: 16, h: 32},
-		SpritePattern{x: 64, y: 0, w: 16, h: 32},
-		SpritePattern{x: 80, y: 0, w: 16, h: 32},
-		SpritePattern{x: 96, y: 0, w: 16, h: 32},
+		{x: 0, y: 0, w: 16, h: 32},
+		{x: 16, y: 0, w: 16, h: 32},
+		{x: 32, y: 0, w: 16, h: 32},
+		{x: 48, y: 0, w: 16, h: 32},
+		{x: 64, y: 0, w: 16, h: 32},
+		{x: 80, y: 0, w: 16, h: 32},
+		{x: 96, y: 0, w: 16, h: 32},
 	}
 	g.sprites = []Sprite{
-		Sprite{id: 0, x: int32(gopherX.Floor()), y: 0},
+		{id: 0, x: int32(gopherX.Floor()), y: 0},
 	}
 	g.gotoTitle()
 	return nil
@@ -159,8 +159,8 @@ func (g *Game) Run() error {
 
 func (g *Game) drawBG() error {
 	i := 0
-	src := sdl.Rect{0, 0, int32(cellWidth), int32(cellHeight)}
-	dst := sdl.Rect{0, 0, int32(cellWidth), int32(cellHeight)}
+	src := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
+	dst := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
 	for x := 0; x < scw; x++ {
 		dst.X = int32(x*cellWidth - g.bgOffX.Floor())
 		for y := 0; y < sch; y++ {
@@ -191,22 +191,25 @@ func (g *Game) procEvent(raw sdl.Event) {
 		if ev.Event == sdl.WINDOWEVENT_CLOSE {
 			g.running = false
 		}
-	case *sdl.KeyDownEvent:
-		if ev.Repeat != 0 {
-			break
-		}
-		switch ev.Keysym.Sym {
-		case sdl.K_SPACE, sdl.K_RETURN:
-			g.pressedA = true
-		case sdl.K_LSHIFT, sdl.K_RSHIFT, sdl.K_LCTRL, sdl.K_RCTRL:
-			g.pressedB = true
-		case sdl.K_ESCAPE:
-			g.running = false
-		}
-	case *sdl.KeyUpEvent:
-		switch ev.Keysym.Sym {
-		case sdl.K_SPACE, sdl.K_RETURN:
-			g.releasedA = true
+	case *sdl.KeyboardEvent:
+		switch ev.Type {
+		case sdl.KEYDOWN:
+			if ev.Repeat != 0 {
+				break
+			}
+			switch ev.Keysym.Sym {
+			case sdl.K_SPACE, sdl.K_RETURN:
+				g.pressedA = true
+			case sdl.K_LSHIFT, sdl.K_RSHIFT, sdl.K_LCTRL, sdl.K_RCTRL:
+				g.pressedB = true
+			case sdl.K_ESCAPE:
+				g.running = false
+			}
+		case sdl.KEYUP:
+			switch ev.Keysym.Sym {
+			case sdl.K_SPACE, sdl.K_RETURN:
+				g.releasedA = true
+			}
 		}
 	}
 }
@@ -220,8 +223,8 @@ func (g *Game) drawSprites() error {
 	for i := len(g.sprites) - 1; i >= 0; i-- {
 		s := g.sprites[i]
 		p := g.spPatterns[s.id]
-		src := sdl.Rect{p.x, p.y, p.w, p.h}
-		dst := sdl.Rect{s.x, s.y, p.w, p.h}
+		src := sdl.Rect{X: p.x, Y: p.y, W: p.w, H: p.h}
+		dst := sdl.Rect{X: s.x, Y: s.y, W: p.w, H: p.h}
 		if err := g.ren.Copy(g.ch2, &src, &dst); err != nil {
 			return err
 		}

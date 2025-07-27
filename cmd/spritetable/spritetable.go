@@ -29,8 +29,8 @@ func main() {
 			z := (y%3 + x) % 3
 			drawBG(img, s, t, 16, 16, z)
 			d.Dot = fixed.Point26_6{
-				fixed.Int26_6(s << 6),
-				fixed.Int26_6((t-1)<<6) + m.Ascent,
+				X: fixed.Int26_6(s << 6),
+				Y: fixed.Int26_6((t-1)<<6) + m.Ascent,
 			}
 			d.DrawString(fmt.Sprintf("%X%x", y, x))
 		}

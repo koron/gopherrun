@@ -1,12 +1,22 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 
+	"github.com/veandco/go-sdl2/img"
+	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
-	img "github.com/veandco/go-sdl2/sdl_image"
-	mix "github.com/veandco/go-sdl2/sdl_mixer"
 )
+
+//go:embed _resources/chartable.png
+var chartable []byte
+
+//go:embed _resources/spritetable.png
+var spritetable []byte
+
+//go:embed _resources/jump07.mp3
+var jumpSound []byte
 
 var renderFlags uint32 = sdl.RENDERER_ACCELERATED | sdl.RENDERER_PRESENTVSYNC
 
@@ -17,8 +27,14 @@ var (
 	cellHeight   = 16
 )
 
-func loadTexture(r *sdl.Renderer, name string) (*sdl.Texture, *sdl.Surface, error) {
-	s, err := img.Load(name)
+// loadTexture load a texture from memory.
+func loadTexture(r *sdl.Renderer, p []byte) (*sdl.Texture, *sdl.Surface, error) {
+	rw, err := sdl.RWFromMem(p)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rw.Close()
+	s, err := img.LoadRW(rw, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -28,6 +44,14 @@ func loadTexture(r *sdl.Renderer, name string) (*sdl.Texture, *sdl.Surface, erro
 		return nil, nil, err
 	}
 	return t, s, nil
+}
+
+func loadMusic(p []byte) (*mix.Music, error) {
+	rw, err := sdl.RWFromMem(p)
+	if err != nil {
+		return nil, err
+	}
+	return mix.LoadMUSRW(rw, 1)
 }
 
 // runGame setup resources and run a game.
@@ -50,7 +74,7 @@ func runGame() error {
 	r.SetLogicalSize(320, 180)
 
 	// background characters
-	t1, s1, err := loadTexture(r, "chartable.png")
+	t1, s1, err := loadTexture(r, chartable)
 	if err != nil {
 		return err
 	}
@@ -58,7 +82,7 @@ func runGame() error {
 	defer s1.Free()
 
 	// sprite characters
-	t2, s2, err := loadTexture(r, "spritetable.png")
+	t2, s2, err := loadTexture(r, spritetable)
 	if err != nil {
 		return err
 	}
@@ -71,7 +95,7 @@ func runGame() error {
 		return err
 	}
 
-	m1, err := mix.LoadMUS("jump07.mp3")
+	m1, err := loadMusic(jumpSound)
 	if err != nil {
 		return err
 	}

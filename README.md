@@ -1,3 +1,18 @@
 # Gopher Run!
 
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/koron/gopherrun)](https://pkg.go.dev/github.com/koron/gopherrun)
+[![Actions/Go](https://github.com/koron/gopherrun/workflows/Go/badge.svg)](https://github.com/koron/gopherrun/actions?query=workflow%3AGo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/koron/gopherrun)](https://goreportcard.com/report/github.com/koron/gopherrun)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/koron/gopherrun)
+
 Sample game using SDL2
+
+## Build on Windows
+
+```console
+# Preparation
+$ pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_mixer
+
+# Build
+$ go build
+```

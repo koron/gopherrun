@@ -28,8 +28,8 @@ func main() {
 			s, t := x*16, y*16
 			drawBG(img, s, t, 16, 16)
 			d.Dot = fixed.Point26_6{
-				fixed.Int26_6(s << 6),
-				fixed.Int26_6((t-1)<<6) + m.Ascent,
+				X: fixed.Int26_6(s << 6),
+				Y: fixed.Int26_6((t-1)<<6) + m.Ascent,
 			}
 			d.DrawString(fmt.Sprintf("%X%x", y, x))
 		}
@@ -56,7 +56,7 @@ func drawBG(img *image.RGBA, x, y, w, h int) {
 		img.Set(x, y+i, fg)
 		img.Set(x+w-1, y+i, fg)
 		for j := 1; j < w-1; j++ {
-			img.Set(x+j,y+i, bg)
+			img.Set(x+j, y+i, bg)
 		}
 	}
 }
