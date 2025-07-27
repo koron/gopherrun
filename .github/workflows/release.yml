@@ -28,6 +28,8 @@ jobs:
         exclude:
         - os: windows-latest
           arch: arm64
+        - os: ubuntu-latest
+          arch: arm64
 
     steps:
 
@@ -73,6 +75,12 @@ jobs:
         echo "PKGNAME=${NAME}_${VERSION}_${GOOS}_${GOARCH}" >> $GITHUB_ENV
         echo "PKGEXT=${PKGEXT}" >> $GITHUB_ENV
 
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
+
     - name: Build
       shell: bash
       run: |
@@ -116,8 +124,8 @@ jobs:
       with: { name: darwin_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: linux_amd64 }
-    - uses: actions/download-artifact@v4
-      with: { name: linux_arm64 }
+    #- uses: actions/download-artifact@v4
+    #  with: { name: linux_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: windows_amd64 }
     - run: ls -lafR
