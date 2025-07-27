@@ -28,6 +28,14 @@ jobs:
         exclude:
         - os: windows-latest
           arch: arm64
+        - os: ubuntu-latest
+          arch: amd64
+        - os: ubuntu-latest
+          arch: arm64
+        - os: macos-latest
+          arch: amd64
+        - os: macos-latest
+          arch: arm64
 
     steps:
 
