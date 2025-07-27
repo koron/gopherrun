@@ -1,25 +1,47 @@
 package main
 
 import (
+	"embed"
+	"errors"
+	"fmt"
+	"image"
+	_ "image/png"
+	"io/fs"
 	"math/rand"
 
-	"github.com/veandco/go-sdl2/mix"
-	"github.com/veandco/go-sdl2/sdl"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/math/fixed"
 )
 
-type Game struct {
-	win *sdl.Window
-	ren *sdl.Renderer
-	ch1 *sdl.Texture
-	ch2 *sdl.Texture
-	se1 *mix.Music
+//go:embed _resources
+var embedFS embed.FS
 
-	running   bool
+var resourcesFS fs.FS
+
+func init() {
+	fsys, err := fs.Sub(embedFS, "_resources")
+	if err != nil {
+		panic(err.Error())
+	}
+	resourcesFS = fsys
+}
+
+type Game2 struct {
+	mode Mode
+
 	frameNum  uint64
 	pressedA  bool
 	releasedA bool
 	pressedB  bool
+
+	running  bool
+	gopherY  fixed.Int26_6
+	speedX   fixed.Int26_6
+	speedY   fixed.Int26_6
+	floating bool
+	risingN  int
 
 	bgMap  []uint8
 	bgOffX fixed.Int26_6
@@ -28,25 +50,24 @@ type Game struct {
 	spPatterns []SpritePattern
 	sprites    []Sprite
 
-	mode     Mode
-	gopherY  fixed.Int26_6
-	speedX   fixed.Int26_6
-	speedY   fixed.Int26_6
-	floating bool
-	risingN  int
+	groundHeight int
+	groundHole   bool
+	groundCont   int
 
 	animeIndex int
 	animeFrame int
 
-	rand         *rand.Rand
-	groundHeight int
-	groundHole   bool
-	groundCont   int
+	rand *rand.Rand
+
+	bgTile     *ebiten.Image
+	spriteTile *ebiten.Image
 }
 
-// Init initialize all game status.
-func (g *Game) Init() error {
+func (g *Game2) Init() error {
+	// Init BG
 	g.bgMap = make([]uint8, scw*sch)
+
+	// Init sprites
 	g.spPatterns = []SpritePattern{
 		{x: 0, y: 0, w: 16, h: 32},
 		{x: 16, y: 0, w: 16, h: 32},
@@ -59,11 +80,22 @@ func (g *Game) Init() error {
 	g.sprites = []Sprite{
 		{id: 0, x: int32(gopherX.Floor()), y: 0},
 	}
+
+	var err error
+	g.bgTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "chartable.png")
+	if err != nil {
+		return err
+	}
+	g.spriteTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "spritetable.png")
+	if err != nil {
+		return err
+	}
+
 	g.gotoTitle()
 	return nil
 }
 
-func (g *Game) gotoTitle() {
+func (g *Game2) gotoTitle() {
 	for x := 0; x < scw; x++ {
 		for y := 0; y < 10; y++ {
 			g.bgMap[x*sch+y] = 0x00
@@ -72,123 +104,60 @@ func (g *Game) gotoTitle() {
 			g.bgMap[x*sch+y] = 0x10
 		}
 	}
-	g.bgOffX = 0
 	g.mode = title
-	g.gopherY = gopherInitY
 	g.running = true
+	g.gopherY = gopherInitY
 	g.speedX = initSpeedX
 	g.speedY = 0
 	g.floating = false
 	g.risingN = 0
-	g.animeIndex = 0
-	g.animeFrame = 0
-	g.rand = rand.New(rand.NewSource(114514))
+	g.bgOffX = 0
+
 	g.groundHeight = 10
 	g.groundHole = false
 	g.groundCont = 5
+
+	g.animeIndex = 0
+	g.animeFrame = 0
+
+	g.rand = rand.New(rand.NewSource(114514))
 }
 
-func (g *Game) Run() error {
-	for g.running {
-		g.initNewFrame()
-		for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
-			g.procEvent(ev)
-		}
-		g.update()
-		if err := g.render(); err != nil {
-			return err
-		}
-		g.ren.Present()
-	}
-	return nil
+func (g *Game2) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return 320, 180
 }
 
-func (g *Game) drawBG() error {
-	i := 0
-	src := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
-	dst := sdl.Rect{X: 0, Y: 0, W: int32(cellWidth), H: int32(cellHeight)}
-	for x := 0; x < scw; x++ {
-		dst.X = int32(x*cellWidth - g.bgOffX.Floor())
-		for y := 0; y < sch; y++ {
-			n := int(g.bgMap[i])
-			dst.Y = int32(y*cellHeight - g.bgOffY.Floor())
-			src.X = int32((n % 16) * cellWidth)
-			src.Y = int32((n / 16) * cellWidth)
-			if err := g.ren.Copy(g.ch1, &src, &dst); err != nil {
-				return err
-			}
-			i++
+func isKeysJustPressed(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustPressed(k) {
+			return true
 		}
 	}
-	return nil
+	return false
 }
 
-// initNewFrame initialize state for a new frame.
-func (g *Game) initNewFrame() {
+func isKeysJustReleased(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustReleased(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Game2) updateInput() error {
+	g.running = !inpututil.IsKeyJustPressed(ebiten.KeyEscape)
 	g.frameNum++
-	g.pressedA = false
-	g.releasedA = false
-	g.pressedB = false
-}
-
-func (g *Game) procEvent(raw sdl.Event) {
-	switch ev := raw.(type) {
-	case *sdl.WindowEvent:
-		if ev.Event == sdl.WINDOWEVENT_CLOSE {
-			g.running = false
-		}
-	case *sdl.KeyboardEvent:
-		switch ev.Type {
-		case sdl.KEYDOWN:
-			if ev.Repeat != 0 {
-				break
-			}
-			switch ev.Keysym.Sym {
-			case sdl.K_SPACE, sdl.K_RETURN:
-				g.pressedA = true
-			case sdl.K_LSHIFT, sdl.K_RSHIFT, sdl.K_LCTRL, sdl.K_RCTRL:
-				g.pressedB = true
-			case sdl.K_ESCAPE:
-				g.running = false
-			}
-		case sdl.KEYUP:
-			switch ev.Keysym.Sym {
-			case sdl.K_SPACE, sdl.K_RETURN:
-				g.releasedA = true
-			}
-		}
-	}
-}
-
-func (g *Game) shiftBG() {
-	l := len(g.bgMap)
-	copy(g.bgMap[0:l-sch], g.bgMap[sch:])
-}
-
-func (g *Game) drawSprites() error {
-	for i := len(g.sprites) - 1; i >= 0; i-- {
-		s := g.sprites[i]
-		p := g.spPatterns[s.id]
-		src := sdl.Rect{X: p.x, Y: p.y, W: p.w, H: p.h}
-		dst := sdl.Rect{X: s.x, Y: s.y, W: p.w, H: p.h}
-		if err := g.ren.Copy(g.ch2, &src, &dst); err != nil {
-			return err
-		}
+	g.pressedA = isKeysJustPressed(ebiten.KeyEnter, ebiten.KeySpace)
+	g.releasedA = isKeysJustReleased(ebiten.KeyEnter, ebiten.KeySpace)
+	g.pressedB = isKeysJustReleased(ebiten.KeyShift, ebiten.KeyControl)
+	if !g.running {
+		return errors.New("game aborted")
 	}
 	return nil
 }
 
-func (g *Game) render() error {
-	if err := g.drawBG(); err != nil {
-		return err
-	}
-	if err := g.drawSprites(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (g *Game) update() {
+func (g *Game2) updateByInput() {
 	if g.floating {
 		if g.risingN > 0 {
 			if g.releasedA {
@@ -209,7 +178,8 @@ func (g *Game) update() {
 			g.risingN = risingInitN
 			g.speedY = -risingPower
 			g.mode = playing
-			g.se1.Play(1)
+			// TODO: play sound effect
+			//g.se1.Play(1)
 		}
 	}
 
@@ -226,35 +196,45 @@ func (g *Game) update() {
 	}
 
 	g.bgOffX += g.speedX
-	// check to hit wall
-	if g.speedX > 0 {
-		y := g.gopherY.Floor()
-		cx := ((gopherX + g.bgOffX).Floor() + cellWidth) / cellWidth
-		cy := y / cellWidth
-		ch := 3
-		if y%cellHeight == 0 {
-			ch = 2
+}
+
+func (g *Game2) checkToHitWalls() {
+	if g.speedX <= 0 {
+		return
+	}
+	y := g.gopherY.Floor()
+	cx := ((gopherX + g.bgOffX).Floor() + cellWidth) / cellWidth
+	cy := y / cellWidth
+	ch := 3
+	if y%cellHeight == 0 {
+		ch = 2
+	}
+	hit := false
+	for i := 0; i < ch; i++ {
+		cy2 := cy + i
+		if cy2 < 0 {
+			continue
+		} else if cy2 >= sch {
+			break
 		}
-		hit := false
-		for i := 0; i < ch; i++ {
-			cy2 := cy + i
-			if cy2 < 0 {
-				continue
-			} else if cy2 >= sch {
-				break
-			}
-			if g.bgMap[cx*sch+cy+i] >= 0x10 {
-				hit = true
-				break
-			}
-		}
-		if hit {
-			g.speedX = 0
-			g.bgOffX = fixed.I((cx-1)*cellWidth) - gopherX
+		if g.bgMap[cx*sch+cy+i] >= 0x10 {
+			hit = true
+			break
 		}
 	}
+	if hit {
+		g.speedX = 0
+		g.bgOffX = fixed.I((cx-1)*cellWidth) - gopherX
+	}
+}
 
-	// scroll and prepare new area
+func (g *Game2) shiftBG() {
+	l := len(g.bgMap)
+	copy(g.bgMap[0:l-sch], g.bgMap[sch:])
+}
+
+// updateScroll scroll and prepare new area
+func (g *Game2) updateScroll() {
 	for g.bgOffX >= maxBgOffx {
 		g.bgOffX -= maxBgOffx
 		g.shiftBG()
@@ -270,7 +250,7 @@ func (g *Game) update() {
 				}
 			}
 		case playing:
-			// TODO: generate stage data
+			// FIXME: generate better stage data
 			n := (scw - 1) * sch
 			for y := 0; y < sch; y++ {
 				if !g.groundHole && y >= g.groundHeight {
@@ -326,8 +306,9 @@ func (g *Game) update() {
 			}
 		}
 	}
+}
 
-	g.gopherY += g.speedY
+func (g *Game2) checkToTouchGround() {
 	// check to touch grand
 	if g.speedY >= 0 {
 		x := (gopherX + g.bgOffX).Floor()
@@ -355,11 +336,24 @@ func (g *Game) update() {
 			}
 		}
 	}
+
 	if g.gopherY.Floor() > screenHeight {
 		// game over
 		g.mode = gameover
 		// FIXME: show game over message
 	}
+}
+
+func (g *Game2) Update() error {
+	if err := g.updateInput(); err != nil {
+		return err
+	}
+
+	g.updateByInput()
+	g.checkToHitWalls()
+	g.updateScroll()
+	g.gopherY += g.speedY
+	g.checkToTouchGround()
 
 	if g.mode == gameover && g.pressedA {
 		// back to title
@@ -382,4 +376,42 @@ func (g *Game) update() {
 
 	g.sprites[0].y = int32(g.gopherY.Floor())
 	g.sprites[0].id = g.animeIndex
+
+	return nil
+}
+
+func (g *Game2) Draw(screen *ebiten.Image) {
+	ebitenutil.DebugPrint(screen, "Hello, World!")
+	g.drawBG(screen)
+	g.drawSprites(screen)
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
+}
+
+func (g *Game2) drawBG(screen *ebiten.Image) {
+	i := 0
+	for x := 0; x < scw; x++ {
+		dx := x*cellWidth - g.bgOffX.Floor()
+		for y := 0; y < sch; y++ {
+			dy := y*cellHeight - g.bgOffY.Floor()
+			n := int(g.bgMap[i])
+			sx := (n % 16) * cellWidth
+			sy := (n / 16) * cellWidth
+			cell := g.bgTile.SubImage(image.Rect(sx, sy, sx+cellWidth, sy+cellWidth)).(*ebiten.Image)
+			var op ebiten.DrawImageOptions
+			op.GeoM.Translate(float64(dx), float64(dy))
+			screen.DrawImage(cell, &op)
+			i++
+		}
+	}
+}
+
+func (g *Game2) drawSprites(screen *ebiten.Image) {
+	for i := len(g.sprites) - 1; i >= 0; i-- {
+		s := g.sprites[i]
+		p := g.spPatterns[s.id]
+		cell := g.spriteTile.SubImage(p.Rect()).(*ebiten.Image)
+		var op ebiten.DrawImageOptions
+		op.GeoM.Translate(float64(s.x), float64(s.y))
+		screen.DrawImage(cell, &op)
+	}
 }
