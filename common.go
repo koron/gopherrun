@@ -3,6 +3,8 @@ package main
 import (
 	"image"
 
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -68,10 +70,24 @@ func (sp SpritePattern) Rect() image.Rectangle {
 	return image.Rect(sp.x, sp.y, sp.x+sp.w, sp.y+sp.h)
 }
 
-type Mode int
+func between(n, minN, maxN int) int {
+	return min(max(n, minN), maxN)
+}
 
-const (
-	title Mode = iota
-	playing
-	gameover
-)
+func isKeysJustPressed(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustPressed(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func isKeysJustReleased(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustReleased(k) {
+			return true
+		}
+	}
+	return false
+}
