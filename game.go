@@ -31,14 +31,13 @@ func init() {
 }
 
 type Game struct {
-	mode Mode
-
-	frameNum  uint64
-	pressedA  bool
-	releasedA bool
-	pressedB  bool
-
+	mode     Mode
 	running  bool
+	frameNum uint64
+
+	jumpPressed  bool
+	jumpReleased bool
+
 	gopherY  fixed.Int26_6
 	speedX   fixed.Int26_6
 	speedY   fixed.Int26_6
@@ -169,9 +168,8 @@ func isKeysJustReleased(keys ...ebiten.Key) bool {
 func (g *Game) updateInput() error {
 	g.running = !inpututil.IsKeyJustPressed(ebiten.KeyEscape)
 	g.frameNum++
-	g.pressedA = isKeysJustPressed(ebiten.KeyEnter, ebiten.KeySpace)
-	g.releasedA = isKeysJustReleased(ebiten.KeyEnter, ebiten.KeySpace)
-	g.pressedB = isKeysJustReleased(ebiten.KeyShift, ebiten.KeyControl)
+	g.jumpPressed = isKeysJustPressed(ebiten.KeyEnter, ebiten.KeySpace)
+	g.jumpReleased = isKeysJustReleased(ebiten.KeyEnter, ebiten.KeySpace)
 	if !g.running {
 		return errors.New("game aborted")
 	}
@@ -181,7 +179,7 @@ func (g *Game) updateInput() error {
 func (g *Game) updateByInput() {
 	if g.floating {
 		if g.risingN > 0 {
-			if g.releasedA {
+			if g.jumpReleased {
 				g.risingN = 0
 			} else {
 				g.risingN--
@@ -194,7 +192,7 @@ func (g *Game) updateByInput() {
 			}
 		}
 	} else {
-		if g.pressedA {
+		if g.jumpPressed {
 			g.floating = true
 			g.risingN = risingInitN
 			g.speedY = -risingPower
@@ -362,7 +360,7 @@ func (g *Game) Update() error {
 	g.gopherY += g.speedY
 	g.checkToTouchGround()
 
-	if g.mode == gameover && g.pressedA {
+	if g.mode == gameover && g.jumpPressed {
 		// back to title
 		g.gotoTitle()
 	}
