@@ -20,6 +20,7 @@ jobs:
       matrix:
         os:
         - ubuntu-latest
+        - ubuntu-24.04-arm
         - macos-latest
         - windows-latest
         arch:
@@ -30,6 +31,8 @@ jobs:
           arch: arm64
         - os: ubuntu-latest
           arch: arm64
+        - os: ubuntu-24.04-arm
+          arch: amd64
 
     steps:
 
@@ -50,11 +53,6 @@ jobs:
         echo "VERSION=${VERSION}" >> $GITHUB_ENV
         case ${{ matrix.os }} in
           ubuntu-*)
-            if [ "${{ matrix.arch }}" = "arm64" ] ; then
-              sudo apt-get update
-              sudo apt-get -y install gcc-12-aarch64-linux-gnu
-              echo "CC=aarch64-linux-gnu-gcc-12" >> $GITHUB_ENV
-            fi
             export GOOS=linux
             export PKGEXT=.tar.gz
             ;;
@@ -124,8 +122,8 @@ jobs:
       with: { name: darwin_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: linux_amd64 }
-    #- uses: actions/download-artifact@v4
-    #  with: { name: linux_arm64 }
+    - uses: actions/download-artifact@v4
+      with: { name: linux_arm64 }
     - uses: actions/download-artifact@v4
       with: { name: windows_amd64 }
     - run: ls -lafR
