@@ -34,32 +34,35 @@ func init() {
 }
 
 type Game struct {
-	frameNum uint64
-
 	updateNext func() (error, bool)
 	updateStop func()
 
 	video Video
 
-	Sounds struct {
+	audio struct {
 		jump *audio.Player
 	}
 
+	// Input related
+	yieldCancel  bool
 	jumpPressed  bool
 	jumpReleased bool
 
+	// Gopher appearance
 	animeIndex int
 	animeFrame int
 
-	groundHeight int
-	groundHole   bool
-	groundCont   int
-
+	// Gopher position
 	gopherY  fixed.Int26_6
 	speedX   fixed.Int26_6
 	speedY   fixed.Int26_6
 	floating bool
 	risingN  int
+
+	// Stage generation
+	groundHeight int
+	groundHole   bool
+	groundCont   int
 }
 
 type Video struct {
@@ -136,7 +139,7 @@ func (g *Game) Init() error {
 	if err != nil {
 		return err
 	}
-	g.Sounds.jump = p
+	g.audio.jump = p
 
 	wg.Wait()
 	return nil
@@ -149,21 +152,29 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 var ErrGameAborted = errors.New("game aborted")
 
 func (g *Game) yieldInput(yield func(error) bool) bool {
-	g.frameNum++
+	if !g.yieldCancel {
+		var err error
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			err = ErrGameAborted
+		}
+		if !yield(err) {
+			return false
+		}
+	} else {
+		g.yieldCancel = false
+	}
 	g.jumpPressed = isKeysJustPressed(ebiten.KeyEnter, ebiten.KeySpace)
 	g.jumpReleased = isKeysJustReleased(ebiten.KeyEnter, ebiten.KeySpace)
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		yield(ErrGameAborted)
-		return false
-	}
 	return true
 }
 
 func (g *Game) yieldUpdate(yield func(error) bool) {
+	g.yieldCancel = true
 	for {
 		if !g.yieldTitle(yield) {
 			break
 		}
+		g.yieldCancel = true
 		if !g.yieldPlaying(yield) {
 			break
 		}
@@ -194,10 +205,6 @@ func (g *Game) yieldTitle(yield func(error) bool) bool {
 
 		g.updateGopher()
 		g.video.sprites[0].id = g.animeIndex
-
-		if !yield(nil) {
-			return false
-		}
 	}
 	return false
 }
@@ -207,14 +214,14 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 
 	// Setup playing
 	rnd := rand.New(rand.NewSource(114514))
-	g.groundHeight = 10
-	g.groundHole = false
-	g.groundCont = 5
 	g.gopherY = gopherInitY
 	g.speedX = initSpeedX
 	g.speedY = 0
 	g.floating = false
 	g.risingN = 0
+	g.groundHeight = 10
+	g.groundHole = false
+	g.groundCont = 5
 
 	for g.yieldInput(yield) {
 		// Update the gopher state.
@@ -234,7 +241,7 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 				g.floating = true
 				g.risingN = risingInitN
 				g.speedY = -risingPower
-				playSE(g.Sounds.jump)
+				playSE(g.audio.jump)
 			}
 		}
 		g.speedX = min(g.speedX+accelX, maxSpeedX)
@@ -266,7 +273,6 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 		// Check gameover
 		if g.gopherY.Floor() > screenHeight {
 			// FIXME: show game over message
-			yield(nil)
 			return true
 		}
 
@@ -282,10 +288,6 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 
 		g.video.sprites[0].y = int(g.gopherY.Floor())
 		g.video.sprites[0].id = g.animeIndex
-
-		if !yield(nil) {
-			return false
-		}
 	}
 	return false
 }
@@ -296,10 +298,7 @@ func (g *Game) yieldGameover(yield func(error) bool) bool {
 	for g.yieldInput(yield) {
 		if g.jumpPressed {
 			// Exit gameover, and go to title.
-			return yield(nil)
-		}
-		if !yield(nil) {
-			return false
+			return true
 		}
 	}
 	return false
