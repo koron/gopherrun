@@ -35,6 +35,7 @@ func init() {
 
 type Game struct {
 	frameNum uint64
+	rand     *rand.Rand
 
 	updateNext func() (error, bool)
 	updateStop func()
@@ -42,32 +43,31 @@ type Game struct {
 	jumpPressed  bool
 	jumpReleased bool
 
+	groundHeight int
+	groundHole   bool
+	groundCont   int
+
 	gopherY  fixed.Int26_6
 	speedX   fixed.Int26_6
 	speedY   fixed.Int26_6
 	floating bool
 	risingN  int
 
-	bgMap  []uint8
-	bgOffX fixed.Int26_6
-	bgOffY fixed.Int26_6
-
-	spPatterns []SpritePattern
-	sprites    []Sprite
-
-	groundHeight int
-	groundHole   bool
-	groundCont   int
-
 	animeIndex int
 	animeFrame int
 
-	rand *rand.Rand
-
-	bgTile     *ebiten.Image
-	spriteTile *ebiten.Image
-
 	seJump *audio.Player
+
+	Screen struct {
+		bgTile *ebiten.Image
+		bgMap  []uint8
+		bgOffX fixed.Int26_6
+		bgOffY fixed.Int26_6
+
+		spriteTile *ebiten.Image
+		spPatterns []SpritePattern
+		sprites    []Sprite
+	}
 }
 
 func (g *Game) Init() error {
@@ -79,10 +79,10 @@ func (g *Game) Init() error {
 	}()
 
 	// Init BG
-	g.bgMap = make([]uint8, scw*sch)
+	g.Screen.bgMap = make([]uint8, scw*sch)
 
 	// Init sprites
-	g.spPatterns = []SpritePattern{
+	g.Screen.spPatterns = []SpritePattern{
 		{x: 0, y: 0, w: 16, h: 32},
 		{x: 16, y: 0, w: 16, h: 32},
 		{x: 32, y: 0, w: 16, h: 32},
@@ -91,16 +91,16 @@ func (g *Game) Init() error {
 		{x: 80, y: 0, w: 16, h: 32},
 		{x: 96, y: 0, w: 16, h: 32},
 	}
-	g.sprites = []Sprite{
+	g.Screen.sprites = []Sprite{
 		{id: 0, x: int(gopherX.Floor()), y: 0},
 	}
 
 	var err error
-	g.bgTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "chartable.png")
+	g.Screen.bgTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "chartable.png")
 	if err != nil {
 		return err
 	}
-	g.spriteTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "spritetable.png")
+	g.Screen.spriteTile, _, err = ebitenutil.NewImageFromFileSystem(resourcesFS, "spritetable.png")
 	if err != nil {
 		return err
 	}
@@ -163,10 +163,10 @@ func (g *Game) yieldTitle(yield func(error) bool) bool {
 	// Setup title
 	for x := 0; x < scw; x++ {
 		for y := 0; y < 10; y++ {
-			g.bgMap[x*sch+y] = 0x00
+			g.Screen.bgMap[x*sch+y] = 0x00
 		}
 		for y := 10; y < sch; y++ {
-			g.bgMap[x*sch+y] = 0x10
+			g.Screen.bgMap[x*sch+y] = 0x10
 		}
 	}
 	g.gopherY = gopherInitY
@@ -174,14 +174,15 @@ func (g *Game) yieldTitle(yield func(error) bool) bool {
 	g.speedY = 0
 	g.floating = false
 	g.risingN = 0
-	g.bgOffX = 0
+	g.Screen.bgOffX = 0
 	g.groundHeight = 10
 	g.groundHole = false
 	g.groundCont = 5
 	g.animeIndex = 0
 	g.animeFrame = 0
 	g.rand = rand.New(rand.NewSource(114514))
-	g.sprites[0].y = int(g.gopherY.Floor())
+
+	g.Screen.sprites[0].y = int(gopherInitY.Floor())
 
 	for g.yieldInput(yield) {
 		if g.jumpPressed {
@@ -189,23 +190,24 @@ func (g *Game) yieldTitle(yield func(error) bool) bool {
 			return true
 		}
 
-		g.bgOffX += initSpeedX
-		for g.bgOffX >= maxBgOffx {
-			g.bgOffX -= maxBgOffx
+		g.Screen.bgOffX += initSpeedX
+
+		for g.Screen.bgOffX >= maxBgOffx {
+			g.Screen.bgOffX -= maxBgOffx
 			g.shiftBG()
 			// insert new bgMap at right
 			n := (scw - 1) * sch
 			for y := 0; y < sch; y++ {
 				if y < 10 {
-					g.bgMap[n+y] = 0x00
+					g.Screen.bgMap[n+y] = 0x00
 				} else {
-					g.bgMap[n+y] = 0x10
+					g.Screen.bgMap[n+y] = 0x10
 				}
 			}
 		}
 
 		g.updateGopher()
-		g.sprites[0].id = g.animeIndex
+		g.Screen.sprites[0].id = g.animeIndex
 
 		if !yield(nil) {
 			return false
@@ -239,20 +241,20 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 			}
 		}
 		g.speedX = min(g.speedX+accelX, maxSpeedX)
-		g.bgOffX += g.speedX
+		g.Screen.bgOffX += g.speedX
 		g.checkToHitWalls()
 
 		// Update scroll
-		for g.bgOffX >= maxBgOffx {
-			g.bgOffX -= maxBgOffx
+		for g.Screen.bgOffX >= maxBgOffx {
+			g.Screen.bgOffX -= maxBgOffx
 			g.shiftBG()
 			// Insert new bgMap at right
 			n := (scw - 1) * sch
 			for y := range sch {
 				if !g.groundHole && y >= g.groundHeight {
-					g.bgMap[n+y] = 0x10
+					g.Screen.bgMap[n+y] = 0x10
 				} else {
-					g.bgMap[n+y] = 0x00
+					g.Screen.bgMap[n+y] = 0x00
 				}
 			}
 			// FIXME: generate better stage data
@@ -281,8 +283,8 @@ func (g *Game) yieldPlaying(yield func(error) bool) bool {
 			g.animeIndex = 0
 		}
 
-		g.sprites[0].y = int(g.gopherY.Floor())
-		g.sprites[0].id = g.animeIndex
+		g.Screen.sprites[0].y = int(g.gopherY.Floor())
+		g.Screen.sprites[0].id = g.animeIndex
 		if !yield(nil) {
 			return false
 		}
@@ -306,8 +308,8 @@ func (g *Game) yieldGameover(yield func(error) bool) bool {
 }
 
 func (g *Game) shiftBG() {
-	l := len(g.bgMap)
-	copy(g.bgMap[0:l-sch], g.bgMap[sch:])
+	l := len(g.Screen.bgMap)
+	copy(g.Screen.bgMap[0:l-sch], g.Screen.bgMap[sch:])
 }
 
 func (g *Game) checkToHitWalls() {
@@ -315,7 +317,7 @@ func (g *Game) checkToHitWalls() {
 		return
 	}
 	y := g.gopherY.Floor()
-	cx := ((gopherX + g.bgOffX).Floor() + cellWidth) / cellWidth
+	cx := ((gopherX + g.Screen.bgOffX).Floor() + cellWidth) / cellWidth
 	cy := y / cellWidth
 	ch := 3
 	if y%cellHeight == 0 {
@@ -329,14 +331,14 @@ func (g *Game) checkToHitWalls() {
 		} else if cy2 >= sch {
 			break
 		}
-		if g.bgMap[cx*sch+cy+i] >= 0x10 {
+		if g.Screen.bgMap[cx*sch+cy+i] >= 0x10 {
 			hit = true
 			break
 		}
 	}
 	if hit {
 		g.speedX = 0
-		g.bgOffX = fixed.I((cx-1)*cellWidth) - gopherX
+		g.Screen.bgOffX = fixed.I((cx-1)*cellWidth) - gopherX
 	}
 }
 
@@ -365,7 +367,7 @@ func (g *Game) generateNextBlocks() {
 func (g *Game) checkToTouchGround() {
 	// check to touch grand
 	if g.speedY >= 0 {
-		x := (gopherX + g.bgOffX).Floor()
+		x := (gopherX + g.Screen.bgOffX).Floor()
 		cx := x / cellWidth
 		cy := (g.gopherY.Floor() + cellHeight*2) / cellHeight
 		cw := 2
@@ -375,7 +377,7 @@ func (g *Game) checkToTouchGround() {
 		if cy >= 0 && cy < sch {
 			touch := false
 			for i := 0; i < cw; i++ {
-				if g.bgMap[(cx+i)*sch+cy] >= 0x10 {
+				if g.Screen.bgMap[(cx+i)*sch+cy] >= 0x10 {
 					touch = true
 					break
 				}
@@ -419,13 +421,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func (g *Game) drawBG(screen *ebiten.Image) {
 	i := 0
 	for x := 0; x < scw; x++ {
-		dx := x*cellWidth - g.bgOffX.Floor()
+		dx := x*cellWidth - g.Screen.bgOffX.Floor()
 		for y := 0; y < sch; y++ {
-			dy := y*cellHeight - g.bgOffY.Floor()
-			n := int(g.bgMap[i])
+			dy := y*cellHeight - g.Screen.bgOffY.Floor()
+			n := int(g.Screen.bgMap[i])
 			sx := (n % 16) * cellWidth
 			sy := (n / 16) * cellWidth
-			cell := g.bgTile.SubImage(image.Rect(sx, sy, sx+cellWidth, sy+cellWidth)).(*ebiten.Image)
+			cell := g.Screen.bgTile.SubImage(image.Rect(sx, sy, sx+cellWidth, sy+cellWidth)).(*ebiten.Image)
 			var op ebiten.DrawImageOptions
 			op.GeoM.Translate(float64(dx), float64(dy))
 			screen.DrawImage(cell, &op)
@@ -435,10 +437,10 @@ func (g *Game) drawBG(screen *ebiten.Image) {
 }
 
 func (g *Game) drawSprites(screen *ebiten.Image) {
-	for i := len(g.sprites) - 1; i >= 0; i-- {
-		s := g.sprites[i]
-		p := g.spPatterns[s.id]
-		cell := g.spriteTile.SubImage(p.Rect()).(*ebiten.Image)
+	for i := len(g.Screen.sprites) - 1; i >= 0; i-- {
+		s := g.Screen.sprites[i]
+		p := g.Screen.spPatterns[s.id]
+		cell := g.Screen.spriteTile.SubImage(p.Rect()).(*ebiten.Image)
 		var op ebiten.DrawImageOptions
 		op.GeoM.Translate(float64(s.x), float64(s.y))
 		screen.DrawImage(cell, &op)
