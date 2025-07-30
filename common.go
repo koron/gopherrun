@@ -4,6 +4,7 @@ import (
 	"image"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/math/fixed"
 )
@@ -86,4 +87,9 @@ func isKeysJustReleased(keys ...ebiten.Key) bool {
 		}
 	}
 	return false
+}
+
+func playSE(p *audio.Player) {
+	p.SetPosition(0)
+	p.Play()
 }
