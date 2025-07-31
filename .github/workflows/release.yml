@@ -95,7 +95,7 @@ jobs:
 
         case "${PKGEXT}" in
           ".tar.gz")
-            tar cf _build/${PKGNAME}${PKGEXT} -C _build ${PKGNAME}
+            tar caf _build/${PKGNAME}${PKGEXT} -C _build ${PKGNAME}
             ;;
           ".zip")
             (cd _build && zip -r9q ${PKGNAME}${PKGEXT} ${PKGNAME})
