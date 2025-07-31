@@ -3,6 +3,9 @@ package main
 import (
 	"image"
 
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -23,33 +26,29 @@ const (
 	// sch is screen character height
 	sch = (screenHeight+cellHeight-1)/cellHeight + 1
 
-	risingInitN = 10
-)
-
-var (
 	// maxBgOffx is max value for bgOffX
-	maxBgOffx = fixed.I(16)
+	maxBgOffx = fixed.Int26_6(16 << 6)
 
-	// gravityPower
-	gravityPower = fixed.I(3) / 2
+	risingInitN = 10
 
-	maxSpeedY = fixed.I(16) / 2
+	risingPower = fixed.Int26_6(11<<6) / 2
 
-	// risingPower
-	risingPower = fixed.I(11) / 2
+	gravityPower = fixed.Int26_6(3<<6) / 2
 
-	gopherX = fixed.I(320) / 5
+	maxSpeedY = fixed.Int26_6(16<<6) / 2
 
-	initSpeedX = fixed.I(1) / 3
+	initSpeedX = fixed.Int26_6(1<<6) / 3
 
-	maxSpeedX = fixed.I(6) / 2
+	accelX = fixed.Int26_6(1<<6) / 40
 
-	accelX = fixed.I(1) / 40
+	maxSpeedX = fixed.Int26_6(6<<6) / 2
 
-	gopherInitY = fixed.I(8 * 16)
+	gopherX = fixed.Int26_6(320<<6) / 5
 
-	walkPattern = []int{3, 4, 5}
+	gopherInitY = fixed.Int26_6(8 * 16 << 6)
 )
+
+var walkPattern = []int{3, 4, 5}
 
 type Sprite struct {
 	id int
@@ -68,10 +67,29 @@ func (sp SpritePattern) Rect() image.Rectangle {
 	return image.Rect(sp.x, sp.y, sp.x+sp.w, sp.y+sp.h)
 }
 
-type Mode int
+func between(n, minN, maxN int) int {
+	return min(max(n, minN), maxN)
+}
 
-const (
-	title Mode = iota
-	playing
-	gameover
-)
+func isKeysJustPressed(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustPressed(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func isKeysJustReleased(keys ...ebiten.Key) bool {
+	for _, k := range keys {
+		if inpututil.IsKeyJustReleased(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func playSE(p *audio.Player) {
+	p.SetPosition(0)
+	p.Play()
+}
