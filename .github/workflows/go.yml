@@ -26,6 +26,12 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
+
     - run: go test ./...
 
     - name: Build all "main" packages
