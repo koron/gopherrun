@@ -3,7 +3,7 @@ module github.com/koron/gopherrun
 go 1.26.0
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.10.2
+	github.com/hajimehoshi/ebiten/v2 v2.10.4
 	golang.org/x/image v0.46.0
 )
 
